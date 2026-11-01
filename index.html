@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Карта энергии — когда вы продуктивнее всего</title>
+  <meta name="description" content="Отмечайте бодрость пару раз в день — тепловая карта покажет ваши часы пика и спада, а подсказки — что влияет на энергию.">
+  <meta name="theme-color" content="#fff7ec">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg: #fff7ec; --card: #ffffff; --ink: #24170e; --muted: #8a7563; --line: #f1e3d1; --hot: #ff6a3d; --l1: #6d5dfc; --l2: #a58bff; --l3: #ffd166; --l4: #ffa45b; --l5: #ff5d3a; color-scheme: light; }
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 Onest, system-ui, sans-serif; }
+    button { font: inherit; color: inherit; cursor: pointer; }
+    .app { max-width: 980px; margin: 0 auto; padding: calc(20px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom)); }
+    h1 { margin: 0; font: 800 clamp(26px, 7vw, 36px)/1.1 Unbounded, sans-serif; letter-spacing: -0.02em; }
+    .sub { margin: 6px 0 18px; color: var(--muted); }
+    .grid { display: grid; gap: 14px; }
+    @media (min-width: 880px) { .grid { grid-template-columns: 1fr 1.25fr; align-items: start; } }
+    .card { padding: 20px; border-radius: 26px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 20px 40px -34px rgba(120, 60, 0, 0.4); min-width: 0; }
+    .card h2 { margin: 0 0 14px; font: 600 16px Unbounded, sans-serif; }
+    .now { background: linear-gradient(140deg, #ffe7c2, #ffd0bd 60%, #ffc4d6); border: 0; }
+    .levels { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+    .lvl { display: grid; justify-items: center; gap: 2px; padding: 14px 2px 10px; border: 0; border-radius: 18px; background: rgba(255, 255, 255, 0.7); transition: transform 0.12s, background 0.2s; }
+    .lvl:hover { background: #fff; }
+    .lvl:active { transform: scale(0.94); }
+    .lvl span { font-size: clamp(26px, 8vw, 34px); line-height: 1.1; }
+    .lvl small { font-size: 11.5px; font-weight: 700; color: var(--muted); }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+    .tags button { padding: 7px 11px; border: 1.5px solid rgba(36, 23, 14, 0.12); border-radius: 999px; background: rgba(255, 255, 255, 0.5); font-size: 13px; font-weight: 600; }
+    .tags button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .hint { margin: 12px 0 0; font-size: 13px; color: #6d5444; }
+    .flash { margin-top: 10px; padding: 10px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.85); font-weight: 600; animation: pop 0.3s ease; }
+    @keyframes pop { from { transform: scale(0.95); opacity: 0; } }
+    .heat { display: grid; grid-template-columns: 26px repeat(18, minmax(0, 1fr)); gap: 3px; }
+    .heat .h { font-size: 10px; color: var(--muted); text-align: center; font-weight: 600; }
+    .heat .d { font-size: 11px; color: var(--muted); font-weight: 700; align-self: center; }
+    .cell { aspect-ratio: 1; border-radius: 5px; background: #f6ede2; position: relative; }
+    .cell[data-v] { cursor: help; }
+    .scale { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+    .scale i { width: 18px; height: 12px; border-radius: 3px; display: inline-block; }
+    .insights { display: grid; gap: 8px; }
+    .ins { display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: start; padding: 12px 14px; border-radius: 16px; background: #fff3e4; }
+    .ins span { font-size: 24px; line-height: 1.2; }
+    .ins b { font-weight: 700; }
+    .chart { width: 100%; height: auto; display: block; }
+    .chart text { fill: var(--muted); font: 600 10px Onest, sans-serif; }
+    .today { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .today button { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 12px; background: #fffaf3; font-size: 13px; }
+    .today button:hover { border-color: #e6b8a8; text-decoration: line-through; }
+    .empty { padding: 18px; text-align: center; color: var(--muted); }
+    .demo { margin-top: 12px; width: 100%; padding: 12px; border: 1.5px dashed #e3c9ad; border-radius: 14px; background: transparent; font-weight: 700; color: var(--muted); }
+    .back { display: inline-block; margin-top: 18px; color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <h1>⚡ Карта энергии</h1>
+  <p class="sub">Отмечайте бодрость 3–5 раз в день. Через неделю станет видно, в какие часы вы на пике, а когда лучше не планировать важное.</p>
+  <div class="grid">
+    <div class="grid" style="grid-template-columns:minmax(0,1fr)">
+      <section class="card now">
+        <h2>Как энергия сейчас?</h2>
+        <div class="levels" id="levels"></div>
+        <div class="tags" id="tags"></div>
+        <p class="hint">Отметьте, что было за последние пару часов, — это поможет найти, что заряжает, а что выматывает.</p>
+        <div id="flash"></div>
+      </section>
+      <section class="card"><h2>Сегодня</h2><div id="todayChart"></div><div class="today" id="todayList"></div></section>
+    </div>
+    <div class="grid" style="grid-template-columns:minmax(0,1fr)">
+      <section class="card">
+        <h2>Тепловая карта недели</h2>
+        <div class="heat" id="heat"></div>
+        <div class="scale">Мало сил <i style="background:var(--l1)"></i><i style="background:var(--l2)"></i><i style="background:var(--l3)"></i><i style="background:var(--l4)"></i><i style="background:var(--l5)"></i> Много сил</div>
+      </section>
+      <section class="card"><h2>Что видно из данных</h2><div class="insights" id="insights"></div><div id="demoWrap"></div></section>
+    </div>
+  </div>
+  <a class="back" href="/">← Портфолио</a>
+</div>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const KEY = 'energy-v1';
+  const LV = [['😵', 'Нет сил'], ['🥱', 'Вяло'], ['😐', 'Норм'], ['🙂', 'Бодро'], ['⚡', 'Огонь']];
+  const TAGS = [['coffee', '☕ Кофе'], ['sport', '🏃 Спорт'], ['walk', '🌳 Прогулка'], ['food', '🍔 Плотная еда'], ['sleep', '😴 Мало сна'], ['screen', '📱 Много экрана'], ['sugar', '🍫 Сладкое']];
+  const H0 = 6, H1 = 23; // часы на карте
+  const COLORS = ['#6d5dfc', '#a58bff', '#ffd166', '#ffa45b', '#ff5d3a'];
+  let log = [];
+  try { log = JSON.parse(localStorage.getItem(KEY)) || []; } catch {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(log)); } catch {} };
+  const selected = new Set();
+  const fmt1 = (v) => v.toFixed(1).replace('.', ',');
+
+  // цвет для среднего значения 1..5 — плавно между точками шкалы
+  function color(v) {
+    const t = Math.max(0, Math.min(3.999, v - 1)), i = Math.floor(t), f = t - i;
+    const a = COLORS[i].match(/\w\w/g).map((h) => parseInt(h, 16)), b = COLORS[i + 1].match(/\w\w/g).map((h) => parseInt(h, 16));
+    return `rgb(${a.map((x, k) => Math.round(x + (b[k] - x) * f)).join(',')})`;
+  }
+
+  $('levels').innerHTML = LV.map(([e, t], i) => `<button class="lvl" data-l="${i + 1}"><span>${e}</span><small>${t}</small></button>`).join('');
+  $('tags').innerHTML = TAGS.map(([k, t]) => `<button data-t="${k}">${t}</button>`).join('');
+  $('tags').querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { selected.has(b.dataset.t) ? selected.delete(b.dataset.t) : selected.add(b.dataset.t); b.classList.toggle('on'); });
+  $('levels').querySelectorAll('[data-l]').forEach((b) => b.onclick = () => {
+    const level = +b.dataset.l;
+    log.push({ ts: Date.now(), level, tags: [...selected] });
+    selected.clear(); $('tags').querySelectorAll('.on').forEach((x) => x.classList.remove('on'));
+    save(); render();
+    const h = new Date().getHours();
+    const same = log.filter((e) => new Date(e.ts).getHours() === h);
+    const avg = same.reduce((s, e) => s + e.level, 0) / same.length;
+    $('flash').innerHTML = `<div class="flash">${LV[level - 1][0]} Записано в ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.${same.length > 2 ? ` Обычно в это время у вас ${fmt1(avg)} из 5.` : ''}</div>`;
+  });
+
+  function heatData() {
+    const cells = {}; // ключ «день-час»
+    for (const e of log) {
+      const d = new Date(e.ts), h = d.getHours();
+      if (h < H0 || h > H1) continue;
+      const k = `${(d.getDay() + 6) % 7}-${h}`;
+      (cells[k] = cells[k] || []).push(e.level);
+    }
+    return cells;
+  }
+
+  function render() {
+    const cells = heatData();
+    let html = '<span></span>';
+    for (let h = H0; h <= H1; h++) html += `<span class="h">${h % 3 === 0 ? h : ''}</span>`;
+    ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach((d, di) => {
+      html += `<span class="d">${d}</span>`;
+      for (let h = H0; h <= H1; h++) {
+        const v = cells[`${di}-${h}`];
+        if (!v) { html += '<span class="cell"></span>'; continue; }
+        const avg = v.reduce((a, b) => a + b, 0) / v.length;
+        html += `<span class="cell" data-v style="background:${color(avg)}" title="${d}, ${h}:00 — ${fmt1(avg)} из 5 (${v.length} отм.)"></span>`;
+      }
+    });
+    $('heat').innerHTML = html;
+    renderToday(); renderInsights();
+  }
+
+  function renderToday() {
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const today = log.filter((e) => e.ts >= +start).sort((a, b) => a.ts - b.ts);
+    if (!today.length) { $('todayChart').innerHTML = '<div class="empty">Сегодня отметок ещё нет.</div>'; $('todayList').innerHTML = ''; return; }
+    const W = Math.round(Math.min(520, Math.max(300, $('todayChart').clientWidth || 520))), H = 150, L = 24, R = 16, T = 12, B = 22;
+    const x = (ts) => { const d = new Date(ts); return L + ((d.getHours() + d.getMinutes() / 60) - H0) / (H1 - H0 + 1) * (W - L - R); };
+    const y = (lv) => T + (5 - lv) / 4 * (H - T - B);
+    let svg = `<svg class="chart" viewBox="0 0 ${W} ${H}"><defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ff5d3a" stop-opacity=".35"/><stop offset="1" stop-color="#6d5dfc" stop-opacity="0"/></linearGradient></defs>`;
+    for (let lv = 1; lv <= 5; lv++) svg += `<line x1="${L}" x2="${W - R}" y1="${y(lv)}" y2="${y(lv)}" stroke="#f1e3d1"/><text x="0" y="${y(lv) + 4}">${LV[lv - 1][0]}</text>`;
+    for (let h = H0; h <= H1 + 1; h += W < 420 ? 6 : 3) { const xx = L + (h - H0) / (H1 - H0 + 1) * (W - L - R); svg += `<text x="${xx}" y="${H - 6}" text-anchor="middle">${h}:00</text>`; }
+    const pts = today.map((e) => [x(e.ts), y(e.level)]);
+    // сглаженная линия
+    let d = `M${pts[0][0]},${pts[0][1]}`;
+    for (let i = 1; i < pts.length; i++) { const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], cx = (x0 + x1) / 2; d += ` C${cx},${y0} ${cx},${y1} ${x1},${y1}`; }
+    if (pts.length > 1) svg += `<path d="${d} L${pts[pts.length - 1][0]},${H - B} L${pts[0][0]},${H - B} Z" fill="url(#g)"/><path d="${d}" fill="none" stroke="#24170e" stroke-width="2.5" stroke-linecap="round"/>`;
+    pts.forEach(([px, py], i) => (svg += `<circle cx="${px}" cy="${py}" r="6" fill="${COLORS[today[i].level - 1]}" stroke="#fff" stroke-width="2"/>`));
+    $('todayChart').innerHTML = svg + '</svg>';
+    $('todayList').innerHTML = today.map((e) => `<button data-del="${e.ts}" title="Удалить">${LV[e.level - 1][0]} ${new Date(e.ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}${e.tags.length ? ' · ' + e.tags.map((t) => TAGS.find((x) => x[0] === t)[1].split(' ')[0]).join('') : ''}</button>`).join('');
+    $('todayList').querySelectorAll('[data-del]').forEach((b) => b.onclick = () => { log = log.filter((e) => e.ts !== +b.dataset.del); save(); render(); });
+  }
+
+  function renderInsights() {
+    const out = [];
+    if (log.length < 8) {
+      out.push(['🌱', `Пока ${log.length} отмет${log.length === 1 ? 'ка' : log.length < 5 && log.length ? 'ки' : 'ок'}. Нужно хотя бы 8, чтобы увидеть закономерности.`]);
+    } else {
+      // средняя энергия по часам и лучшее двухчасовое окно
+      const byHour = Array.from({ length: 24 }, () => []);
+      log.forEach((e) => byHour[new Date(e.ts).getHours()].push(e.level));
+      const avg = (a) => a.reduce((s, x) => s + x, 0) / a.length;
+      const overall = avg(log.map((e) => e.level));
+      let best = null, worst = null;
+      for (let h = H0; h < H1; h++) {
+        const w = [...byHour[h], ...byHour[h + 1]];
+        if (w.length < 3) continue;
+        const v = avg(w);
+        if (!best || v > best.v) best = { h, v };
+        if (!worst || v < worst.v) worst = { h, v };
+      }
+      if (best) out.push(['🚀', `<b>Ваш пик — с ${best.h}:00 до ${best.h + 2}:00</b> (${fmt1(best.v)} из 5). Ставьте сюда самые сложные задачи.`]);
+      if (worst && worst.h !== best?.h) out.push(['🪫', `<b>Спад около ${worst.h}:00–${worst.h + 2}:00</b> (${fmt1(worst.v)}). Хорошее время для рутины, прогулки или короткого отдыха.`]);
+      // влияние тегов: энергия в отметках с тегом против остальных
+      const effects = TAGS.map(([k, t]) => {
+        const w = log.filter((e) => e.tags.includes(k)), wo = log.filter((e) => !e.tags.includes(k));
+        return w.length >= 3 && wo.length >= 3 ? { t, diff: avg(w.map((e) => e.level)) - avg(wo.map((e) => e.level)), n: w.length } : null;
+      }).filter(Boolean).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+      effects.slice(0, 3).forEach((e) => {
+        if (Math.abs(e.diff) < 0.25) return;
+        out.push([e.diff > 0 ? '📈' : '📉', `С пометкой «${e.t}» энергия в среднем <b>${e.diff > 0 ? 'выше' : 'ниже'} на ${fmt1(Math.abs(e.diff))}</b> (по ${e.n} отметкам).`]);
+      });
+      // будни против выходных
+      const we = log.filter((e) => [0, 6].includes(new Date(e.ts).getDay())), wd = log.filter((e) => ![0, 6].includes(new Date(e.ts).getDay()));
+      if (we.length >= 3 && wd.length >= 3) { const d = avg(we.map((e) => e.level)) - avg(wd.map((e) => e.level)); if (Math.abs(d) >= 0.3) out.push(['📅', `В выходные энергии ${d > 0 ? 'больше' : 'меньше'} на ${fmt1(Math.abs(d))}. ${d > 0 ? 'Возможно, в будни не хватает отдыха или сна.' : 'Будни держат в тонусе.'}`]); }
+      out.push(['📊', `Всего ${log.length} отметок, средняя энергия ${fmt1(overall)} из 5.`]);
+    }
+    $('insights').innerHTML = out.map(([i, t]) => `<div class="ins"><span>${i}</span><span>${t}</span></div>`).join('');
+    $('demoWrap').innerHTML = log.length < 8 ? '<button class="demo" id="demo">Показать на примере трёх недель</button>' : '';
+    if (log.length < 8) $('demo').onclick = demo;
+  }
+
+  // пример: пик утром, спад после обеда, второе дыхание вечером
+  function demo() {
+    log = [];
+    const now = new Date();
+    for (let d = 20; d >= 0; d--) {
+      const day = new Date(now); day.setDate(now.getDate() - d);
+      const weekend = [0, 6].includes(day.getDay());
+      const badSleep = Math.random() < 0.25;
+      for (const h of [8, 10, 12, 14, 15, 17, 19, 21, 22]) {
+        if (Math.random() < 0.3) continue;
+        if (d === 0 && h > now.getHours()) continue;
+        const base = { 8: 2.6, 10: 4.3, 12: 3.9, 14: 2.4, 15: 2.2, 17: 3.4, 19: 3.7, 21: 3, 22: 2.3 }[h];
+        const tags = [];
+        let v = base + (weekend ? 0.4 : 0) + (Math.random() - 0.5) * 1.1;
+        if (badSleep) { v -= 0.9; if (h <= 10) tags.push('sleep'); }
+        if (h === 10 && Math.random() < 0.6) { tags.push('coffee'); v += 0.4; }
+        if (h === 14 && Math.random() < 0.6) { tags.push('food'); v -= 0.5; }
+        if ((h === 17 || h === 19) && Math.random() < 0.35) { tags.push(Math.random() < 0.5 ? 'walk' : 'sport'); v += 0.7; }
+        if (h >= 21 && Math.random() < 0.5) { tags.push('screen'); v -= 0.3; }
+        const t = new Date(day); t.setHours(h, Math.random() * 50 | 0, 0, 0);
+        log.push({ ts: +t, level: Math.max(1, Math.min(5, Math.round(v))), tags });
+      }
+    }
+    save(); render();
+  }
+
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderToday, 150); });
+  render();
+})();
+</script>
+</body>
+</html>
